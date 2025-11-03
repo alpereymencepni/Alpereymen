@@ -26,8 +26,15 @@ const categoryMap = {
 
 const getTriviaQuestions = async (category, difficulty) => {
     const apiCategory = categoryMap[category.toLowerCase()] || category;
+    const difficultyMap = {
+        "kolay": "easy",
+        "orta": "medium",
+        "zor": "hard"
+    };
+    const apiDifficulty = difficultyMap[difficulty.toLowerCase()] || difficulty;
+
     try {
-        const response = await axios.get(`https://the-trivia-api.com/v2/questions?limit=10&categories=${apiCategory}&difficulties=${difficulty}`);
+        const response = await axios.get(`https://the-trivia-api.com/v2/questions?limit=10&categories=${apiCategory}&difficulties=${apiDifficulty}`);
         return response.data.map(q => ({
             question: q.question.text,
             answers: [...q.incorrectAnswers, q.correctAnswer].sort(() => Math.random() - 0.5),
@@ -36,6 +43,33 @@ const getTriviaQuestions = async (category, difficulty) => {
     } catch (error) {
         console.error('Error fetching trivia questions:', error);
         return [];
+    }
+};
+
+const startTimer = (roomCode) => {
+    const room = rooms[roomCode];
+    if (room.timer) clearInterval(room.timer);
+
+    let timeLeft = 30;
+    room.timer = setInterval(() => {
+        io.to(roomCode).emit('timerUpdate', timeLeft);
+        timeLeft--;
+        if (timeLeft < 0) {
+            clearInterval(room.timer);
+            nextQuestion(roomCode);
+        }
+    }, 1000);
+};
+
+const nextQuestion = (roomCode) => {
+    const room = rooms[roomCode];
+    room.answers = {};
+    room.questionIndex++;
+    if (room.questionIndex < room.questions.length) {
+        io.to(roomCode).emit('nextQuestion');
+        startTimer(roomCode);
+    } else {
+        io.to(roomCode).emit('gameOver', room.scores);
     }
 };
 
@@ -52,7 +86,8 @@ io.on('connection', (socket) => {
             questions: questions,
             scores: {},
             answers: {},
-            questionIndex: 0
+            questionIndex: 0,
+            timer: null
         };
         socket.join(roomCode);
         rooms[roomCode].players.push({ id: socket.id });
@@ -77,6 +112,7 @@ io.on('connection', (socket) => {
         const roomCode = Object.keys(rooms).find(key => rooms[key].players.some(p => p.id === socket.id));
         if (roomCode && rooms[roomCode]) {
             io.to(roomCode).emit('gameStarted', rooms[roomCode].questions);
+            startTimer(roomCode);
         }
     });
 
@@ -94,13 +130,8 @@ io.on('connection', (socket) => {
             room.answers[socket.id] = true;
 
             if (Object.keys(room.answers).length === room.players.length) {
-                room.answers = {};
-                room.questionIndex++;
-                if (room.questionIndex < room.questions.length) {
-                    io.to(roomCode).emit('nextQuestion');
-                } else {
-                    io.to(roomCode).emit('gameOver', room.scores);
-                }
+                clearInterval(room.timer);
+                nextQuestion(roomCode);
             }
         }
     });

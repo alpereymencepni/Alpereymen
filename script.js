@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomCodeInput = document.getElementById('room-code-input');
     const appContainer = document.querySelector('.container');
     const quizContainer = document.getElementById('quiz-container');
+    const timerEl = document.getElementById('timer');
     const splitScreenContainer = document.getElementById('split-screen-container');
     const questionEl = document.getElementById('question');
     const answersEl = document.getElementById('answers');
@@ -16,10 +17,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Offline Multiplayer Elements
     const p1_question = document.getElementById('p1-question');
+    const p1_timerEl = document.getElementById('p1-timer');
     const p1_answers = document.getElementById('p1-answers');
     const p1_feedback = document.getElementById('p1-feedback');
     const p1_score = document.getElementById('p1-score');
     const p2_question = document.getElementById('p2-question');
+    const p2_timerEl = document.getElementById('p2-timer');
     const p2_answers = document.getElementById('p2-answers');
     const p2_feedback = document.getElementById('p2-feedback');
     const p2_score = document.getElementById('p2-score');
@@ -28,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onlineContainer = document.getElementById('online-container');
     const waitingRoom = document.getElementById('waiting-room');
     const onlineQuiz = document.getElementById('online-quiz');
+    const onlineTimerEl = document.getElementById('online-timer');
     const roomCodeEl = document.getElementById('room-code');
     const playersList = document.getElementById('players-list');
     const startGameOnlineButton = document.getElementById('start-game-online');
@@ -35,13 +39,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const onlineAnswersEl = document.getElementById('online-answers');
     const onlineFeedbackEl = document.getElementById('online-feedback');
 
+    const resultsContainer = document.getElementById('results-container');
+    const resultsSummary = document.getElementById('results-summary');
+    const playAgainFromResultsButton = document.getElementById('play-again-from-results');
+
     let socket;
+    let userAnswers = [];
 
     let currentQuestions = [];
     let score = 0;
     let p1Score = 0;
     let p2Score = 0;
     let questionIndex = 0;
+    let timer;
+    let timeLeft = 30;
+    let p1Answered = false;
+    let p2Answered = false;
 
     const mockQuestions = [
         {
@@ -125,6 +138,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function startTimer() {
+        timeLeft = 30;
+        timerEl.textContent = timeLeft;
+        timerEl.style.borderColor = '#e67e22';
+        timer = setInterval(() => {
+            timeLeft--;
+            timerEl.textContent = timeLeft;
+            if (timeLeft < 10) {
+                timerEl.style.borderColor = '#e74c3c';
+            }
+            if (timeLeft === 0) {
+                clearInterval(timer);
+                selectAnswer(null, currentQuestions[questionIndex].correct);
+            }
+        }, 1000);
+    }
+
     function displayNextQuestion() {
         resetState();
         if (questionIndex < currentQuestions.length) {
@@ -138,16 +168,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.addEventListener('click', () => selectAnswer(answer, questionData.correct));
                 answersEl.appendChild(button);
             });
+            startTimer();
         } else {
             endGame();
         }
     }
 
     function selectAnswer(selected, correct) {
+        clearInterval(timer);
+        userAnswers.push({
+            question: currentQuestions[questionIndex].question,
+            selected: selected,
+            correct: correct
+        });
+
         if (selected === correct) {
             score++;
             feedbackEl.innerText = "Doğru!";
             feedbackEl.style.color = '#2ecc71';
+        } else if (selected === null) {
+            feedbackEl.innerText = `Süre doldu! Doğru cevap: ${correct}`;
+            feedbackEl.style.color = '#f39c12';
         } else {
             feedbackEl.innerText = `Yanlış! Doğru cevap: ${correct}`;
             feedbackEl.style.color = '#e74c3c';
@@ -165,18 +206,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function endGame() {
-        questionEl.innerHTML = `Oyun Bitti! <br> Toplam Puanınız: ${score} / ${currentQuestions.length}`;
-        answersEl.innerHTML = '';
-        feedbackEl.innerText = '';
+        quizContainer.classList.add('hidden');
+        resultsContainer.classList.remove('hidden');
 
-        const playAgainButton = document.createElement('button');
-        playAgainButton.innerText = 'Tekrar Oyna';
-        playAgainButton.addEventListener('click', () => {
-            quizContainer.classList.add('hidden');
-            appContainer.classList.remove('hidden');
+        resultsSummary.innerHTML = '';
+        userAnswers.forEach(answer => {
+            const resultItem = document.createElement('div');
+            resultItem.classList.add('result-item');
+            const isCorrect = answer.selected === answer.correct;
+            resultItem.classList.add(isCorrect ? 'correct' : 'incorrect');
+
+            resultItem.innerHTML = `
+                <p><strong>Soru:</strong> ${answer.question}</p>
+                <p><strong>Cevabınız:</strong> ${answer.selected || 'Boş'}</p>
+                ${!isCorrect ? `<p><strong>Doğru Cevap:</strong> ${answer.correct}</p>` : ''}
+            `;
+            resultsSummary.appendChild(resultItem);
         });
-        answersEl.appendChild(playAgainButton);
+
+        userAnswers = []; // reset for next game
     }
+
+    playAgainFromResultsButton.addEventListener('click', () => {
+        resultsContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+    });
 
     offlineMultiplayerButton.addEventListener('click', startOfflineMultiplayerGame);
 
@@ -195,8 +249,45 @@ document.addEventListener('DOMContentLoaded', () => {
         displayNextMultiplayerQuestion();
     }
 
+    function startMultiplayerTimer() {
+        timeLeft = 30;
+        p1_timerEl.textContent = timeLeft;
+        p2_timerEl.textContent = timeLeft;
+        p1_timerEl.style.borderColor = '#e67e22';
+        p2_timerEl.style.borderColor = '#e67e22';
+        timer = setInterval(() => {
+            timeLeft--;
+            p1_timerEl.textContent = timeLeft;
+            p2_timerEl.textContent = timeLeft;
+            if (timeLeft < 10) {
+                p1_timerEl.style.borderColor = '#e74c3c';
+                p2_timerEl.style.borderColor = '#e74c3c';
+            }
+            if (timeLeft === 0) {
+                moveToNextMultiplayerQuestion();
+            }
+        }, 1000);
+    }
+
+    function moveToNextMultiplayerQuestion() {
+        clearInterval(timer);
+        const questionData = currentQuestions[questionIndex];
+        if (!p1Answered) {
+            p1_feedback.innerText = `Süre doldu! Doğru cevap: ${questionData.correct}`;
+            p1_feedback.style.color = '#f39c12';
+        }
+        if (!p2Answered) {
+            p2_feedback.innerText = `Süre doldu! Doğru cevap: ${questionData.correct}`;
+            p2_feedback.style.color = '#f39c12';
+        }
+        questionIndex++;
+        setTimeout(displayNextMultiplayerQuestion, 1500);
+    }
+
     function displayNextMultiplayerQuestion() {
         resetMultiplayerState();
+        p1Answered = false;
+        p2Answered = false;
         if (questionIndex < currentQuestions.length) {
             const questionData = currentQuestions[questionIndex];
             p1_question.innerText = questionData.question;
@@ -218,56 +309,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 p2Button.dataset.key = p2AnswerKeys[index];
                 p2_answers.appendChild(p2Button);
             });
+            startMultiplayerTimer();
         } else {
             endMultiplayerGame();
         }
     }
 
     document.addEventListener('keydown', (e) => {
-        if (!splitScreenContainer.classList.contains('hidden')) {
-            const key = e.key.toUpperCase();
-            const p1Keys = ['Q', 'W', 'E', 'R'];
-            const p2Keys = ['1', '2', '3', '4'];
+        if (splitScreenContainer.classList.contains('hidden')) return;
 
-            if (p1Keys.includes(key) || p2Keys.includes(key)) {
-                const questionData = currentQuestions[questionIndex];
-                const answers = questionData.answers;
-                let selectedAnswer = '';
-                let player = 0;
+        const key = e.key.toUpperCase();
+        const p1Keys = ['Q', 'W', 'E', 'R'];
+        const p2Keys = ['1', '2', '3', '4'];
+        const questionData = currentQuestions[questionIndex];
+        const answers = questionData.answers;
 
-                if(p1Keys.includes(key)){
-                    selectedAnswer = answers[p1Keys.indexOf(key)];
-                    player = 1;
-                } else {
-                    selectedAnswer = answers[p2Keys.indexOf(key)];
-                    player = 2;
-                }
-
-                if (selectedAnswer === questionData.correct) {
-                    if(player === 1) {
-                        p1Score++;
-                        p1_score.textContent = p1Score;
-                        p1_feedback.innerText = "Doğru!";
-                        p1_feedback.style.color = '#2ecc71';
-                    } else {
-                        p2Score++;
-                        p2_score.textContent = p2Score;
-                        p2_feedback.innerText = "Doğru!";
-                        p2_feedback.style.color = '#2ecc71';
-                    }
-                } else {
-                    if(player === 1) {
-                        p1_feedback.innerText = `Yanlış!`;
-                        p1_feedback.style.color = '#e74c3c';
-                    } else {
-                        p2_feedback.innerText = `Yanlış!`;
-                        p2_feedback.style.color = '#e74c3c';
-                    }
-                }
-
-                questionIndex++;
-                setTimeout(displayNextMultiplayerQuestion, 1500);
+        if (p1Keys.includes(key)) {
+            if (p1Answered) return;
+            p1Answered = true;
+            const selectedAnswer = answers[p1Keys.indexOf(key)];
+            if (selectedAnswer === questionData.correct) {
+                p1Score++;
+                p1_score.textContent = p1Score;
+                p1_feedback.innerText = "Doğru!";
+                p1_feedback.style.color = '#2ecc71';
+            } else {
+                p1_feedback.innerText = `Yanlış! Doğru cevap: ${questionData.correct}`;
+                p1_feedback.style.color = '#e74c3c';
             }
+        } else if (p2Keys.includes(key)) {
+            if (p2Answered) return;
+            p2Answered = true;
+            const selectedAnswer = answers[p2Keys.indexOf(key)];
+            if (selectedAnswer === questionData.correct) {
+                p2Score++;
+                p2_score.textContent = p2Score;
+                p2_feedback.innerText = "Doğru!";
+                p2_feedback.style.color = '#2ecc71';
+            } else {
+                p2_feedback.innerText = `Yanlış! Doğru cevap: ${questionData.correct}`;
+                p2_feedback.style.color = '#e74c3c';
+            }
+        }
+
+        if (p1Answered && p2Answered) {
+            moveToNextMultiplayerQuestion();
         }
     });
 
@@ -308,36 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         p2_answers.appendChild(playAgainButton);
     }
 
-    onlineMultiplayerButton.addEventListener('click', () => {
-        const topic = topicInput.value;
-        const difficulty = difficultySelect.value;
-        if (!topic) {
-            alert("Lütfen bir konu girin!");
-            return;
-        }
-
-        socket = io();
-
-        socket.on('connect', () => {
-            console.log('Connected to server');
-            socket.emit('createRoom', { topic, difficulty });
-        });
-
-        socket.on('roomCreated', (roomCode) => {
-            appContainer.classList.add('hidden');
-            onlineContainer.classList.remove('hidden');
-            roomCodeEl.textContent = roomCode;
-        });
-
-        socket.on('playerJoined', (players) => {
-            playersList.innerHTML = '';
-            players.forEach(player => {
-                const li = document.createElement('li');
-                li.textContent = player.id;
-                playersList.appendChild(li);
-            });
-        });
-
+    function setupOnlineGameListeners() {
         socket.on('gameStarted', (questions) => {
             waitingRoom.classList.add('hidden');
             onlineQuiz.classList.remove('hidden');
@@ -373,6 +430,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             onlineAnswersEl.appendChild(scoresList);
         });
+
+        socket.on('timerUpdate', (timeLeft) => {
+            onlineTimerEl.textContent = timeLeft;
+            if (timeLeft < 10) {
+                onlineTimerEl.style.borderColor = '#e74c3c';
+            } else {
+                onlineTimerEl.style.borderColor = '#e67e22';
+            }
+        });
+    }
+
+    onlineMultiplayerButton.addEventListener('click', () => {
+        const topic = topicInput.value;
+        const difficulty = difficultySelect.value;
+        if (!topic) {
+            alert("Lütfen bir konu girin!");
+            return;
+        }
+
+        socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            socket.emit('createRoom', { topic, difficulty });
+        });
+
+        socket.on('roomCreated', (roomCode) => {
+            appContainer.classList.add('hidden');
+            onlineContainer.classList.remove('hidden');
+            roomCodeEl.textContent = roomCode;
+        });
+
+        socket.on('playerJoined', (players) => {
+            playersList.innerHTML = '';
+            players.forEach(player => {
+                const li = document.createElement('li');
+                li.textContent = player.id;
+                playersList.appendChild(li);
+            });
+        });
+
+        setupOnlineGameListeners();
     });
 
     startGameOnlineButton.addEventListener('click', () => {
@@ -429,41 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(message);
         });
 
-        // Other socket event listeners from createRoom should also be here...
-        socket.on('gameStarted', (questions) => {
-            waitingRoom.classList.add('hidden');
-            onlineQuiz.classList.remove('hidden');
-            currentQuestions = questions;
-            questionIndex = 0;
-            displayNextOnlineQuestion();
-        });
-
-        socket.on('answerResult', ({ correct, correctAnswer }) => {
-            if (correct) {
-                onlineFeedbackEl.textContent = 'Doğru!';
-                onlineFeedbackEl.style.color = '#2ecc71';
-            } else {
-                onlineFeedbackEl.textContent = `Yanlış! Doğru cevap: ${correctAnswer}`;
-                onlineFeedbackEl.style.color = '#e74c3c';
-            }
-        });
-
-        socket.on('nextQuestion', () => {
-            questionIndex++;
-            displayNextOnlineQuestion();
-        });
-
-        socket.on('gameOver', (scores) => {
-            onlineQuestionEl.innerHTML = 'Oyun Bitti!';
-            onlineAnswersEl.innerHTML = '';
-
-            const scoresList = document.createElement('ul');
-            for(const playerId in scores) {
-                const li = document.createElement('li');
-                li.textContent = `${playerId}: ${scores[playerId]}`;
-                scoresList.appendChild(li);
-            }
-            onlineAnswersEl.appendChild(scoresList);
-        });
+        setupOnlineGameListeners();
     });
 });
