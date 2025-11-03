@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindSlove</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
@@ -22,6 +25,13 @@
                     <option value="zor">Zor</option>
                 </select>
             </div>
+            <div class="form-group toggle-group">
+                <label for="show-answers-toggle">Çevrimdışı Cevapları Göster</label>
+                <label class="switch">
+                    <input type="checkbox" id="show-answers-toggle" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
             <div class="button-group">
                 <button id="single-player">Tek Kişilik</button>
                 <button id="multiplayer-online">Oda Oluştur</button>
@@ -34,12 +44,14 @@
             </div>
         </div>
         <div id="quiz-container" class="hidden">
+            <div id="timer">30</div>
             <div id="question"></div>
             <div id="answers"></div>
             <div id="feedback"></div>
         </div>
         <div id="split-screen-container" class="hidden">
             <div id="player1" class="player-screen">
+                <div id="p1-timer" class="timer">30</div>
                 <div class="player-name">Oyuncu 1</div>
                 <div id="p1-question" class="question"></div>
                 <div id="p1-answers" class="answers"></div>
@@ -47,6 +59,7 @@
                 <div class="score">Puan: <span id="p1-score">0</span></div>
             </div>
             <div id="player2" class="player-screen">
+                <div id="p2-timer" class="timer">30</div>
                 <div class="player-name">Oyuncu 2</div>
                 <div id="p2-question" class="question"></div>
                 <div id="p2-answers" class="answers"></div>
@@ -62,10 +75,16 @@
                 <button id="start-game-online">Oyunu Başlat</button>
             </div>
             <div id="online-quiz" class="hidden">
+                <div id="online-timer" class="timer">30</div>
                 <div id="online-question"></div>
                 <div id="online-answers"></div>
                 <div id="online-feedback"></div>
             </div>
+        </div>
+        <div id="results-container" class="hidden">
+            <h2>Sonuçlar</h2>
+            <div id="results-summary"></div>
+            <button id="play-again-from-results">Tekrar Oyna</button>
         </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>

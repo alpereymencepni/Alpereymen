@@ -8,3 +8,4 @@
 .idea/navEditor.xml
 .idea/assetWizardSettings.xml
 /node_modules
+server.log
