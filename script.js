@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const onlineMultiplayerButton = document.getElementById('multiplayer-online');
     const joinRoomButton = document.getElementById('join-room');
     const roomCodeInput = document.getElementById('room-code-input');
+    const showAnswersToggle = document.getElementById('show-answers-toggle');
     const appContainer = document.querySelector('.container');
     const quizContainer = document.getElementById('quiz-container');
     const timerEl = document.getElementById('timer');
@@ -55,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let timeLeft = 30;
     let p1Answered = false;
     let p2Answered = false;
+    let p1SelectedAnswer = null;
+    let p2SelectedAnswer = null;
 
     const mockQuestions = [
         {
@@ -264,30 +267,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 p2_timerEl.style.borderColor = '#e74c3c';
             }
             if (timeLeft === 0) {
-                moveToNextMultiplayerQuestion();
+                evaluateMultiplayerAnswers();
             }
         }, 1000);
     }
 
-    function moveToNextMultiplayerQuestion() {
+    function evaluateMultiplayerAnswers() {
         clearInterval(timer);
         const questionData = currentQuestions[questionIndex];
-        if (!p1Answered) {
-            p1_feedback.innerText = `Süre doldu! Doğru cevap: ${questionData.correct}`;
-            p1_feedback.style.color = '#f39c12';
+        const showAnswers = showAnswersToggle.checked;
+
+        // Evaluate P1
+        if (p1SelectedAnswer === questionData.correct) {
+            p1Score++;
+            p1_score.textContent = p1Score;
+            if (showAnswers) {
+                p1_feedback.innerText = "Doğru!";
+                p1_feedback.style.color = '#2ecc71';
+            }
+        } else {
+            if (showAnswers) {
+                p1_feedback.innerText = p1SelectedAnswer === null ? `Süre doldu! Doğru: ${questionData.correct}` : `Yanlış! Doğru: ${questionData.correct}`;
+                p1_feedback.style.color = p1SelectedAnswer === null ? '#f39c12' : '#e74c3c';
+            }
         }
-        if (!p2Answered) {
-            p2_feedback.innerText = `Süre doldu! Doğru cevap: ${questionData.correct}`;
-            p2_feedback.style.color = '#f39c12';
+
+        // Evaluate P2
+        if (p2SelectedAnswer === questionData.correct) {
+            p2Score++;
+            p2_score.textContent = p2Score;
+            if (showAnswers) {
+                p2_feedback.innerText = "Doğru!";
+                p2_feedback.style.color = '#2ecc71';
+            }
+        } else {
+            if (showAnswers) {
+                p2_feedback.innerText = p2SelectedAnswer === null ? `Süre doldu! Doğru: ${questionData.correct}` : `Yanlış! Doğru: ${questionData.correct}`;
+                p2_feedback.style.color = p2SelectedAnswer === null ? '#f39c12' : '#e74c3c';
+            }
         }
+
         questionIndex++;
-        setTimeout(displayNextMultiplayerQuestion, 1500);
+        setTimeout(displayNextMultiplayerQuestion, showAnswers ? 2000 : 500);
     }
 
     function displayNextMultiplayerQuestion() {
         resetMultiplayerState();
         p1Answered = false;
         p2Answered = false;
+        p1SelectedAnswer = null;
+        p2SelectedAnswer = null;
+
         if (questionIndex < currentQuestions.length) {
             const questionData = currentQuestions[questionIndex];
             p1_question.innerText = questionData.question;
@@ -316,44 +346,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('keydown', (e) => {
-        if (splitScreenContainer.classList.contains('hidden')) return;
+        if (splitScreenContainer.classList.contains('hidden') || questionIndex >= currentQuestions.length) return;
 
         const key = e.key.toUpperCase();
         const p1Keys = ['Q', 'W', 'E', 'R'];
         const p2Keys = ['1', '2', '3', '4'];
-        const questionData = currentQuestions[questionIndex];
-        const answers = questionData.answers;
+        const answers = currentQuestions[questionIndex].answers;
 
-        if (p1Keys.includes(key)) {
-            if (p1Answered) return;
+        if (p1Keys.includes(key) && !p1Answered) {
             p1Answered = true;
-            const selectedAnswer = answers[p1Keys.indexOf(key)];
-            if (selectedAnswer === questionData.correct) {
-                p1Score++;
-                p1_score.textContent = p1Score;
-                p1_feedback.innerText = "Doğru!";
-                p1_feedback.style.color = '#2ecc71';
-            } else {
-                p1_feedback.innerText = `Yanlış! Doğru cevap: ${questionData.correct}`;
-                p1_feedback.style.color = '#e74c3c';
-            }
-        } else if (p2Keys.includes(key)) {
-            if (p2Answered) return;
+            p1SelectedAnswer = answers[p1Keys.indexOf(key)];
+            p1_answers.querySelectorAll('.answer-btn').forEach(btn => {
+                if(btn.dataset.key === key) btn.style.backgroundColor = '#e67e22';
+                btn.disabled = true;
+            });
+        } else if (p2Keys.includes(key) && !p2Answered) {
             p2Answered = true;
-            const selectedAnswer = answers[p2Keys.indexOf(key)];
-            if (selectedAnswer === questionData.correct) {
-                p2Score++;
-                p2_score.textContent = p2Score;
-                p2_feedback.innerText = "Doğru!";
-                p2_feedback.style.color = '#2ecc71';
-            } else {
-                p2_feedback.innerText = `Yanlış! Doğru cevap: ${questionData.correct}`;
-                p2_feedback.style.color = '#e74c3c';
-            }
+            p2SelectedAnswer = answers[p2Keys.indexOf(key)];
+            p2_answers.querySelectorAll('.answer-btn').forEach(btn => {
+                if(btn.dataset.key === key) btn.style.backgroundColor = '#e67e22';
+                btn.disabled = true;
+            });
         }
 
         if (p1Answered && p2Answered) {
-            moveToNextMultiplayerQuestion();
+            evaluateMultiplayerAnswers();
         }
     });
 
