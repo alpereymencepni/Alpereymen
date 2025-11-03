@@ -1,0 +1,14 @@
+{
+  "name": "mindslove",
+  "version": "1.0.0",
+  "description": "A multiplayer quiz game.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.3.2",
+    "axios": "^0.24.0"
+  }
+}
