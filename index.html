@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindSlove</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <h1>MindSlove'a Hoş Geldiniz</h1>
+            <div class="form-group">
+                <label for="topic">Konu</label>
+                <input type="text" id="topic" placeholder="Bir konu girin">
+            </div>
+            <div class="form-group">
+                <label for="difficulty">Zorluk</label>
+                <select id="difficulty">
+                    <option value="kolay">Kolay</option>
+                    <option value="orta">Orta</option>
+                    <option value="zor">Zor</option>
+                </select>
+            </div>
+            <div class="button-group">
+                <button id="single-player">Tek Kişilik</button>
+                <button id="multiplayer-online">Oda Oluştur</button>
+                <button id="multiplayer-offline">Çevrimdışı Çok Kişilik</button>
+            </div>
+            <div class="form-group">
+                <label for="room-code-input">Oda Kodu</label>
+                <input type="text" id="room-code-input" placeholder="Oda kodunu girin">
+                <button id="join-room">Odaya Katıl</button>
+            </div>
+        </div>
+        <div id="quiz-container" class="hidden">
+            <div id="question"></div>
+            <div id="answers"></div>
+            <div id="feedback"></div>
+        </div>
+        <div id="split-screen-container" class="hidden">
+            <div id="player1" class="player-screen">
+                <div class="player-name">Oyuncu 1</div>
+                <div id="p1-question" class="question"></div>
+                <div id="p1-answers" class="answers"></div>
+                <div class="feedback" id="p1-feedback"></div>
+                <div class="score">Puan: <span id="p1-score">0</span></div>
+            </div>
+            <div id="player2" class="player-screen">
+                <div class="player-name">Oyuncu 2</div>
+                <div id="p2-question" class="question"></div>
+                <div id="p2-answers" class="answers"></div>
+                <div class="feedback" id="p2-feedback"></div>
+                <div class="score">Puan: <span id="p2-score">0</span></div>
+            </div>
+        </div>
+        <div id="online-container" class="hidden">
+            <div id="waiting-room">
+                <h2>Oda Kodu: <span id="room-code"></span></h2>
+                <p>Oyuncular bekleniyor...</p>
+                <ul id="players-list"></ul>
+                <button id="start-game-online">Oyunu Başlat</button>
+            </div>
+            <div id="online-quiz" class="hidden">
+                <div id="online-question"></div>
+                <div id="online-answers"></div>
+                <div id="online-feedback"></div>
+            </div>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
