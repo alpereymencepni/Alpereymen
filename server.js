@@ -48,6 +48,10 @@ const getTriviaQuestions = async (category, difficulty) => {
 
 const startTimer = (roomCode) => {
     const room = rooms[roomCode];
+    if (!room) {
+        return;
+    }
+
     if (room.timer) clearInterval(room.timer);
 
     let timeLeft = 30;
@@ -63,6 +67,10 @@ const startTimer = (roomCode) => {
 
 const nextQuestion = (roomCode) => {
     const room = rooms[roomCode];
+    if (!room) {
+        return;
+    }
+
     room.answers = {};
     room.questionIndex++;
     if (room.questionIndex < room.questions.length) {
@@ -79,6 +87,11 @@ io.on('connection', (socket) => {
     socket.on('createRoom', async ({ topic, difficulty }) => {
         const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         const questions = await getTriviaQuestions(topic, difficulty);
+
+        if (!questions.length) {
+            socket.emit('error', 'Sorular alınamadı. Lütfen tekrar deneyin.');
+            return;
+        }
 
         rooms[roomCode] = {
             players: [],
@@ -99,6 +112,16 @@ io.on('connection', (socket) => {
 
     socket.on('joinRoom', (roomCode) => {
         if (rooms[roomCode]) {
+            if (rooms[roomCode].players.length >= 2) {
+                socket.emit('error', 'Bu oda dolu.');
+                return;
+            }
+
+            if (rooms[roomCode].players.some(player => player.id === socket.id)) {
+                socket.emit('error', 'Bu odaya zaten katıldınız.');
+                return;
+            }
+
             socket.join(roomCode);
             rooms[roomCode].players.push({ id: socket.id });
             rooms[roomCode].scores[socket.id] = 0;
@@ -111,6 +134,11 @@ io.on('connection', (socket) => {
     socket.on('startGame', () => {
         const roomCode = Object.keys(rooms).find(key => rooms[key].players.some(p => p.id === socket.id));
         if (roomCode && rooms[roomCode]) {
+            if (rooms[roomCode].players.length < 2) {
+                socket.emit('error', 'Oyunu başlatmak için en az 2 oyuncu gerekli.');
+                return;
+            }
+
             io.to(roomCode).emit('gameStarted', rooms[roomCode].questions);
             startTimer(roomCode);
         }
@@ -121,6 +149,15 @@ io.on('connection', (socket) => {
         if (roomCode && rooms[roomCode]) {
             const room = rooms[roomCode];
             const question = room.questions[questionIndex];
+            if (!question) {
+                socket.emit('error', 'Geçersiz soru. Oyun yeniden başlatılmalı.');
+                return;
+            }
+
+            if (room.answers[socket.id]) {
+                return;
+            }
+
             const correct = question.correct === answer;
             if (correct) {
                 room.scores[socket.id]++;
