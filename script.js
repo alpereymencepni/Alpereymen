@@ -126,12 +126,18 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Oyun Başladı: Konu - ${topic}, Zorluk - ${difficulty}`);
 
         socket = io();
+        userAnswers = [];
 
         socket.on('connect', () => {
             socket.emit('getSinglePlayerQuestions', { topic, difficulty });
         });
 
         socket.on('singlePlayerQuestions', (questions) => {
+            if (!questions.length) {
+                alert('Soru alınamadı, lütfen tekrar deneyin.');
+                return;
+            }
+
             appContainer.classList.add('hidden');
             quizContainer.classList.remove('hidden');
             currentQuestions = questions;
@@ -240,6 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function startOfflineMultiplayerGame() {
         appContainer.classList.add('hidden');
         splitScreenContainer.classList.remove('hidden');
+        clearInterval(timer);
 
         currentQuestions = [...mockQuestions].sort(() => Math.random() - 0.5).slice(0, 10);
         p1Score = 0;
@@ -404,10 +411,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const playAgainButton = document.createElement('button');
         playAgainButton.innerText = 'Tekrar Oyna';
         playAgainButton.addEventListener('click', () => {
+            clearInterval(timer);
             splitScreenContainer.classList.add('hidden');
             appContainer.classList.remove('hidden');
         });
-        p1_answers.appendChild(playAgainButton.cloneNode(true));
+
+        const playAgainButtonP1 = playAgainButton.cloneNode(true);
+        playAgainButtonP1.addEventListener('click', () => {
+            clearInterval(timer);
+            splitScreenContainer.classList.add('hidden');
+            appContainer.classList.remove('hidden');
+        });
+
+        p1_answers.appendChild(playAgainButtonP1);
         p2_answers.appendChild(playAgainButton);
     }
 
@@ -492,7 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     startGameOnlineButton.addEventListener('click', () => {
-        socket.emit('startGame');
+        if (socket) {
+            socket.emit('startGame');
+        }
     });
 
     function displayNextOnlineQuestion() {
@@ -546,5 +564,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         setupOnlineGameListeners();
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (socket) {
+            socket.disconnect();
+        }
     });
 });

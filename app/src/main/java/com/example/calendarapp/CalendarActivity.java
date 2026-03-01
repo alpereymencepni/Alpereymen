@@ -17,7 +17,6 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import androidx.core.app.NotificationManagerCompat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -86,8 +85,13 @@ public class CalendarActivity extends AppCompatActivity {
         builder.setPositiveButton("Add", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                String title = arrangementTitle.getText().toString();
-                String department = departmentSpinner.getSelectedItem().toString();
+                String title = arrangementTitle.getText().toString().trim();
+                Object selectedDepartment = departmentSpinner.getSelectedItem();
+                if (selectedDepartment == null) {
+                    return;
+                }
+
+                String department = selectedDepartment.toString();
                 if (!title.isEmpty()) {
                     Arrangement newArrangement = new Arrangement(title, selectedDate, department);
                     arrangementList.add(newArrangement);
@@ -129,7 +133,11 @@ public class CalendarActivity extends AppCompatActivity {
         intent.putExtra("message", arrangement.getTitle());
         intent.putExtra("notificationId", arrangement.hashCode());
 
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, arrangement.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, arrangement.hashCode(), intent, pendingIntentFlags);
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         Calendar calendar = Calendar.getInstance();
